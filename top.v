@@ -15,30 +15,34 @@ module top (
     output addr_b,
     output addr_c,
 
-    output [7:0] test_voltage
-);
-wire pwm_clk,adc_finish;
-//assign test_adc_finish=adc_finish;
-//assign test_pwm_clk=pwm_clk;
-wire [7:0] voltage;
-assign test_voltage=PWM_duty;
-wire [7:0] PWM_duty;
-reg [15:0] counter;
-reg adc_driver_start;
+    input uart_rx,
+    output wire uart_tx,
+    output wire [3:0] test
 
-always @(posedge sys_clk or negedge rst_n) begin
-    if(!rst_n)begin
-        counter<=0;adc_driver_start<=0;
-    end else begin
-        if(counter<16'd2700)begin
-            counter<=counter+1'b1;
-            adc_driver_start<=0;
-        end else begin
-            counter<=0;
-            adc_driver_start<=1;
-        end
-    end
-end
+);
+wire adc_driver_start,adc_done,
+    pid_start,
+    uart_send,uart_received,uart_busy;
+wire [7:0] voltage;
+wire [7:0] uart_rx_data;
+wire [7:0] pid_setpoint;
+wire [7:0] PWM_duty;
+
+time_ctrl CTRL(
+    .sys_clk(sys_clk),
+    .rst_n(rst_n),
+
+    .adc_start(adc_driver_start),
+    .adc_done(adc_done),
+
+    .uart_send(uart_send),
+    .uart_busy(uart_busy),
+    .uart_received(uart_received),
+    .uart_rx_data(uart_rx_data),
+
+    .pid_start(pid_start),
+    .pid_setpoint(pid_setpoint)
+);
 
 adc0809_driver ADC(
     .clk(sys_clk),
@@ -52,28 +56,38 @@ adc0809_driver ADC(
     .addr_b(addr_b),
     .addr_c(addr_c),
     .data_out(voltage),
-    .data_valid(adc_finish)
+    .data_valid(adc_done)
 );
 
-boost_pid PID(
+uart UART(
+    .clk_27m(sys_clk),
+    .rst_n(rst_n),
+    .tx_data(voltage),
+    .tx_start(uart_send),
+    .txd(uart_tx),
+    .rx_valid(uart_received),
+    .rx_data(uart_rx_data),
+    .rxd(uart_rx),
+    .debug_state_tx(test)
+);
+
+pid PID(
     .clk(sys_clk),
     .rst_n(rst_n),
-    .ready(adc_finish),
-    .setpoint(8'd214),
+    .ready(pid_start),
+    .setpoint(pid_setpoint),
     .voltage_actual(voltage),
-    .new_duty(PWM_duty),
-    .test_state(test_pid_state)
+    .new_duty(PWM_duty)
 );
 
 PWM_gen H_bridge(
     .sys_clk(sys_clk),
     .rst_n(rst_n),
     .Duty(PWM_duty),
-    .Mode(2'b10),
+    .Mode(2'b01),
     .PWM_HIGH_1(PWM_HIGH_1),
     .PWM_LOW_1(PWM_LOW_1),
     .PWM_HIGH_2(PWM_HIGH_2),
-    .PWM_LOW_2(PWM_LOW_2),
-    .PWM_clk(pwm_clk)
+    .PWM_LOW_2(PWM_LOW_2)
 );
 endmodule

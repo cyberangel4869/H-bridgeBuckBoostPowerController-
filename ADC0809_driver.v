@@ -42,7 +42,7 @@ reg [2:0] channel_sel;            // 通道选择寄存器
 
 reg [3:0] adc_driver_start_reg;
 wire adc_start;
-always @(posedge clk or negedge rst_n) begin
+always @(posedge clk or negedge rst_n) begin  //开始信号上升沿监测，开始信号同步
     if(!rst_n)adc_driver_start_reg<=0;
     else adc_driver_start_reg<={adc_driver_start_reg[2:0],adc_driver_start};
 end

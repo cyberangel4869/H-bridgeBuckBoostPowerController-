@@ -9,7 +9,7 @@ module PWM_gen(
     output reg PWM_HIGH_1,    // 通道1高侧驱动信号  
     output reg PWM_LOW_2,     // 通道2低侧驱动信号
     output reg PWM_HIGH_2,     // 通道2高侧驱动信号
-    output PWM_clk
+    output PWM_clk              //测试用
 );
 
 // 工作模式定义
